@@ -4,7 +4,7 @@ const express = require('express')
 
 const maxRange = 3000; //In meters
 
-var app = express();
+const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -12,12 +12,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'jade');
 
 app.get('/', function (req, res) {
-  console.log('-------------------------------------------------------------------\nGET: Index Page');
+  // console.log('-------------------------------------------------------------------\nGET: Index Page');
   res.render('index');
 });
 
 app.post('/', function (req, res) {
-  var respMessage = new Message({
+  const respMessage = new Message({
     username: req.body.username,
     message: req.body.message,
     range: maxRange,
@@ -30,8 +30,8 @@ app.post('/', function (req, res) {
 
   Message.create(respMessage, function () {
     Message.find(function (err, doc) {
-      var resp = JSON.stringify(doc);
-      console.log('-------------------------------------------------------------------\ncreate message: ' + resp);
+      const resp = JSON.stringify(doc);
+      // console.log('-------------------------------------------------------------------\ncreate message: ' + resp);
       res.render('index', { response: resp });
     });
   });
@@ -50,16 +50,17 @@ app.get('/messages/:lat/:lgn', function (req, res) {
     }
   ], function (err, result) {
     if (err) {
-      console.log('-------------------------------------------------------------------\nError: ' + err);
+      // console.log('-------------------------------------------------------------------\nError: ' + err);
+      console.err(err);
       return;
     }
-    var array = new Array();
-    result.forEach(function (val) {
+    const array = [];
+    result.forEach((val) => {
       if (val.range >= val.dist.calculated) {
         array.push(val);
       }
     });
-    console.log('-------------------------------------------------------------------\n' + req.params.lat + ',' + req.params.lgn + '\nget messages: \n' + array.toString());
+    // console.log('-------------------------------------------------------------------\n' + req.params.lat + ',' + req.params.lgn + '\nget messages: \n' + array.toString());
     res.send(array);
   });
 });

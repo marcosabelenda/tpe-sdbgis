@@ -4,6 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -12,6 +13,9 @@
     "async": "^2.6.1",
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
+    "geo-distance": "^0.2.0",
+    "geodistance": "^1.0.0",
+    "geolib": "^2.0.24",
     "jade": "^1.11.0",
     "mongo": "^0.1.0",
     "mongoose": "^5.3.9"

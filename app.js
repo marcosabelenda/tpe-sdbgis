@@ -39,6 +39,8 @@ app.post('/', function (req, res) {
 
 
 app.get('/messages/:lat/:lgn', function (req, res) {
+  console.log(req.params.lat);
+  console.log(req.params.lgn);
   Message.aggregate([
     {
       $geoNear: {

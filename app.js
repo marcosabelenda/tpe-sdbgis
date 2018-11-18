@@ -48,10 +48,29 @@ const transformPsqlToJsonObject = (result) => {
 
 app.get('/postgres/index', (req, res) => res.render('indexpostgres'));
 
-app.get('/postgres/messages/:lat/:lgn', (req, res) => {
-  psql.query('SELECT st_AsText(geometry) as geometry, username, message FROM tweets;', (err, result) => {
+app.get('/postgres/messages/:lat/:lng', (req, res) => {
+  const loc = {
+    lat: req.params.lat,
+    lng: req.params.lng
+  };
+
+  /*SELECT
+    st_AsText(geometry) as geometry, username, message
+    FROM tweets
+    WHERE ST_Within(geometry, ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint(-58.491008, -34.5008638), 4326), 3857), 3000), 4326)) = true
+  */
+
+  const q = {
+    select: 'st_AsText(geometry) as geometry, username, message',
+    from: 'tweets',
+    where: `ST_Within(geometry, ST_Transform(ST_Buffer(ST_Transform(ST_SetSRID(ST_MakePoint(${loc.lat}, ${loc.lng}), 4326), 3857), ${maxRange}), 4326)) = true`
+  };
+
+  const queryStr = `SELECT ${q.select} FROM ${q.from} WHERE ${q.where};`;
+  psql.query(queryStr, (err, result) => {
     if (err) {
       console.error('Error quering postgress database: ', err);
+      return res.status(500).send(err);
     }
     res.send(result.rows.map(transformPsqlToJsonObject));
   });

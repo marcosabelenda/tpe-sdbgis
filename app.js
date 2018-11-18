@@ -75,6 +75,26 @@ app.get('/postgres/messages/:lat/:lng', (req, res) => {
     res.send(result.rows.map(transformPsqlToJsonObject));
   });
 });
+
+app.post('/postgres', (req, res) => {
+  const message = {
+    username: req.body.username,
+    message: req.body.message,
+    range: maxRange,
+    geometry: {
+      type: 'Point',
+      coordinates: [req.body.lat, req.body.lon]
+    },
+    type: 'Feature'
+  }
+
+  const q = {
+    insert_into: ``,
+
+  }
+
+  return res.status(200).redirect('/postgres/index');
+});
 //________________________________
 
 app.post('/', function (req, res) {

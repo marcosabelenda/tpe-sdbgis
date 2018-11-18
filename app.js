@@ -3,7 +3,8 @@ const express = require('express')
   , geolib = require('geolib')
   , Message = require('./controllers/message')
   , loremIpsum = require('lorem-ipsum')
-  , async = require('async');
+  , async = require('async')
+  , psql = require('./storage/postgres');
 
 const maxRange = 3000; //In meters
 
@@ -18,9 +19,44 @@ const getRandomUserName = () => loremIpsum({ count: 1, units: 'words' });
 const getRandomTweet = () => loremIpsum();
 
 app.get('/', function (req, res) {
-  // console.log('-------------------------------------------------------------------\nGET: Index Page');
   res.render('index');
 });
+
+//________________________________
+
+const transformPsqlToJsonObject = (result) => {
+  const locSplit = result.geometry.split(/(\(| |\))/);
+  const location = {
+    lat: locSplit[2],
+    lng: locSplit[4]
+  };
+
+  return {
+    geometry: {
+      type: 'Point',
+      coordinates: [
+        location.lat,
+        location.lng
+      ]
+    },
+    username: result.username,
+    message: result.message,
+    range: 3000, //TODO: DE-HARDCODE
+    type: 'Feature' // Without this one we don't live.
+  }
+};
+
+app.get('/postgres/index', (req, res) => res.render('indexpostgres'));
+
+app.get('/postgres/messages/:lat/:lgn', (req, res) => {
+  psql.query('SELECT st_AsText(geometry) as geometry, username, message FROM tweets;', (err, result) => {
+    if (err) {
+      console.error('Error quering postgress database: ', err);
+    }
+    res.send(result.rows.map(transformPsqlToJsonObject));
+  });
+});
+//________________________________
 
 app.post('/', function (req, res) {
   const respMessage = new Message({
@@ -37,7 +73,6 @@ app.post('/', function (req, res) {
   Message.create(respMessage, function () {
     Message.find(function (err, doc) {
       const resp = JSON.stringify(doc);
-      // console.log('-------------------------------------------------------------------\ncreate message: ' + resp);
       res.render('index', { response: resp });
     });
   });
@@ -56,7 +91,6 @@ app.get('/messages/:lat/:lgn', function (req, res) {
     }
   ], function (err, result) {
     if (err) {
-      // console.log('-------------------------------------------------------------------\nError: ' + err);
       console.err(err);
       return;
     }
@@ -66,7 +100,7 @@ app.get('/messages/:lat/:lgn', function (req, res) {
         array.push(val);
       }
     });
-    // console.log('-------------------------------------------------------------------\n' + req.params.lat + ',' + req.params.lgn + '\nget messages: \n' + array.toString());
+    console.log(array);
     res.send(array);
   });
 });
@@ -90,8 +124,6 @@ app.post('/messages/create_random', (req, res) => {
     const dist = rndInt(maxRange);
     const bearing = rndInt(360);
     const newLocaltion = geolib.computeDestinationPoint(location, dist, bearing);
-    // console.log(getRandomUserName() + '> ' + getRandomTweet() + ' - ' + newLocaltion.latitude + ',' + newLocaltion.longitude);
-
 
     // Create message
     const message = new Message({

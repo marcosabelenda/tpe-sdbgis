@@ -1,0 +1,156 @@
+doctype doctype
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    title Location tweeter postgres
+    link(rel="stylesheet", href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css", integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==", crossorigin="")
+    link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css", integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm", crossorigin="anonymous")
+    script(src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js", integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA==", crossorigin="")
+    script(src="https://code.jquery.com/jquery-3.2.1.slim.min.js", integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN", crossorigin="anonymous")
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js", integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q", crossorigin="anonymous")
+    script(src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js", integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl", crossorigin="anonymous")
+    script(src="https://code.jquery.com/jquery-3.3.1.js", integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60=", crossorigin="anonymous")
+    style.
+      #map{width: 900px; height: 500px}
+  body
+    div(class="container-fluid" style="margin-top: 40px")
+      div(class="row")
+        div(class="col-6 col-md-8")
+          //- mapa
+          #map
+            script.
+
+              //crea el mapa
+              var map = new L.Map('map');
+              //Google geolocation:
+              //https://developers.google.com/maps/documentation/javascript/examples/map-geolocation
+              var init = function(map) {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(function(position) {
+
+                    var pos = { lat: position.coords.longitude,lng: position.coords.latitude };
+                    console.log("coordinates:" + pos);
+
+                    //hace foco en ubicación actual
+                    map.setView([position.coords.latitude, position.coords.longitude], 10);
+                      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      {
+                      attribution: '&copy, <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                      //maxZoom: 18,
+                      minZoom: 8,
+                    }).addTo(map);
+
+                    //setea la latitud y longitud en el form
+                    var lat = document.getElementById("lat");
+                    lat.value = position.coords.longitude;
+                    var lgn = document.getElementById("lgn");
+                    lgn.value = position.coords.latitude;
+
+                    var lat2 = document.getElementById("lat2");
+                    lat2.value = position.coords.longitude;
+                    var lgn2 = document.getElementById("lgn2");
+                    lgn2.value = position.coords.latitude;
+
+                    //pide los mensajes cercanos a esa coordenada.
+                    const url='/postgres/messages/'+ position.coords.longitude + '/' + position.coords.latitude ;
+                    $.get( url, function( resp ) {
+
+                      console.log("messages response: " + resp);
+
+                      //style de los markers
+                      var geojsonMarkerOptions = {
+                          radius: 8,
+                          fillColor: "#ff7800",
+                          color: "#000",
+                          weight: 1,
+                          opacity: 1,
+                          fillOpacity: 0.8
+                      };
+
+                      //agrupa los mensajes que estan muy juntos para que no se solapen y dificulte la visualización
+                      var array = [];
+                      for (k in resp) {
+                        var flag = false;
+                        for (i in array){
+                          latR = truncate(resp[k].geometry.coordinates[0],4);
+                          latA = truncate(array[i].geometry.coordinates[0],4);
+                          lgnR = truncate(resp[k].geometry.coordinates[1],4);
+                          lgnA = truncate(array[i].geometry.coordinates[1],4);
+                          if( latR == latA && lgnR == lgnA ) {
+
+                            //concatena a una descripción existente un mensaje en formato html
+                            array[i].des = array[i].des.toString() + "<br/><b>" + resp[k].username + "</b><br/>" + resp[k].message;
+                            flag = true;
+                            break;
+                          }
+                        }
+                        if(!flag){
+
+                          //agrega a la descripción con formato html un mensaje
+                          var aux = "<b>" + resp[k].username + "</b><br/>" + resp[k].message;
+                          array.push({"geometry": {"type": resp[k].geometry.type, "coordinates": resp[k].geometry.coordinates}, "type": resp[k].type, "des": aux});
+                        }
+                      }
+
+                      console.log("messages group: " + array);
+
+                      //agrega los marcadores al mapa
+                      L.geoJSON(array, {
+                          onEachFeature: onEachFeature,
+                          pointToLayer: function (feature, latlng) {
+                            return L.circleMarker(latlng, geojsonMarkerOptions);
+                          }
+                      }).addTo(map);
+
+                    }, "json" );
+                  }, function() {
+                    console.log("error");
+                  });
+                } else {
+                  console.log("no soporta la geo");
+                }
+              }
+
+              init(map);
+
+              function onEachFeature(feature, layer) {
+                  if (feature.des) {
+                      layer.bindPopup(feature.des, {autoClose: false,closeOnClick: false}).openPopup();
+                  }
+              }
+              function truncate(num, fixed) {
+                fixed = fixed || 0;
+                fixed = Math.pow(10, fixed);
+                return Math.floor(num * fixed) / fixed;
+              }
+
+
+        //- formulario
+        div(class="col-6 col-md-3")
+          h1
+            b Do a post bitch!
+          form(action="/" method="POST")
+            div(class="form-group")
+              label(for="username") username
+              input(type="text", name="username",placeholder="username", id="username", class="form-control")
+            div(class="form-group")
+              label(for="message") message
+              input(type="text", name="message",placeholder="message", id="message", class="form-control")
+            div(class="form-group")
+              input(type="hidden", name="lat", id="lat", class="form-control")
+            div(class="form-group")
+              input(type="hidden", name="lon", id="lgn", class="form-control")
+            div(class="form-group")
+              input(type="submit", value="Enviar", class="btn btn-info")
+          h1
+            b Generate random tweets
+          form(action="/messages/create_random" method="POST")
+            div(class="form-group")
+              label(for="amount") amount
+              input(type="number", name="amount", placeholder="amount", id="amount", class="form-control")
+            div(class="form-group")
+              input(type="hidden", name="lat", id="lat2", class="form-control")
+            div(class="form-group")
+              input(type="hidden", name="lon", id="lgn2", class="form-control")
+            div(class="form-group")
+              input(type="submit", value="Enviar", class="btn btn-info")

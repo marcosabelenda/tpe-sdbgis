@@ -77,24 +77,65 @@ app.get('/postgres/messages/:lat/:lng', (req, res) => {
 });
 
 app.post('/postgres', (req, res) => {
-  const message = {
-    username: req.body.username,
-    message: req.body.message,
-    range: maxRange,
-    geometry: {
-      type: 'Point',
-      coordinates: [req.body.lat, req.body.lon]
-    },
-    type: 'Feature'
+  const loc = {
+    lat: req.body.lat,
+    lng: req.body.lon
   }
 
   const q = {
-    insert_into: ``,
+    table: 'tweets',
+    insert_type: '(geometry, username, message, range)',
+    values: `(ST_SetSRID(ST_MakePoint(${loc.lat},${loc.lng}), 4326), '${req.body.username}', '${req.body.message}', ${maxRange})`
+  };
 
+  const queryStr = `INSERT INTO ${q.table}${q.insert_type} VALUES ${q.values}`;
+  psql.query(queryStr, (err, result) => {
+    if(err){
+      console.error('Error quering postgress database: ', err);
+      return res.status(500).send(err);
+    }
+    return res.status(200).redirect('/postgres/index');
+  });
+});
+
+app.post('/postgres/messages/create_random', (req, res) => {
+
+  const amount = parseInt(req.body.amount);
+  const lat = req.body.lat;
+  const lon = req.body.lon;
+
+  if (!amount || !lat || !lon) {
+    return res.status(400).render('index');
   }
 
-  return res.status(200).redirect('/postgres/index');
+  const messageList = createRandomMessages(lat, lon, amount, (obj) => obj);
+
+  async.each(messageList, (elem, cb) => postgresInsert(elem, cb), (err) => {
+    if (err) {
+      console.error(`Error creating random tweets. ${err}`);
+      return res.status(500).send(err);
+    }
+    return res.status(200).redirect('/postgres/index');
+  })
+
 });
+
+const postgresInsert = (elem, cb) => {
+  const q = {
+    table: 'tweets',
+    insert_type: '(geometry, username, message, range)',
+    values: `(ST_SetSRID(ST_MakePoint(${elem.geometry.coordinates[0]},${elem.geometry.coordinates[1]}), 4326), '${elem.username}', '${elem.message}', ${elem.range})`
+  };
+
+  const queryStr = `INSERT INTO ${q.table}${q.insert_type} VALUES ${q.values}`;
+  psql.query(queryStr, (err, result) => {
+    if (err) {
+      console.error('Error quering postgress database: ', err);
+      return cb(err);
+    }
+    cb();
+  });
+};
 //________________________________
 
 app.post('/', function (req, res) {
@@ -144,17 +185,11 @@ app.get('/messages/:lat/:lgn', function (req, res) {
   });
 });
 
-app.post('/messages/create_random', (req, res) => {
+
+const createRandomMessages = (lat, lon, amount, builder) => {
 
   const rndInt = (max) => Math.floor(Math.random() * Math.floor(max + 1));
 
-  const amount = parseInt(req.body.amount);
-  const lat = req.body.lat;
-  const lon = req.body.lon;
-
-  if (!amount || !lat || !lon) {
-    return res.status(400).render('index');
-  }
   const location = { lat, lon };
 
   const messageList = [];
@@ -165,7 +200,7 @@ app.post('/messages/create_random', (req, res) => {
     const newLocaltion = geolib.computeDestinationPoint(location, dist, bearing);
 
     // Create message
-    const message = new Message({
+    const message = builder({
       username: getRandomUserName(),
       message: getRandomTweet(),
       range: maxRange,
@@ -178,6 +213,22 @@ app.post('/messages/create_random', (req, res) => {
     messageList.push(message);
   }
 
+  return messageList;
+};
+
+
+app.post('/messages/create_random', (req, res) => {
+
+  const amount = parseInt(req.body.amount);
+  const lat = req.body.lat;
+  const lon = req.body.lon;
+
+  if (!amount || !lat || !lon) {
+    return res.status(400).render('index');
+  }
+
+  const messageList = createRandomMessages(lat, lon, amount, (obj) => new Message(obj));
+
   async.each(messageList, (elem, cb) => Message.create(elem, cb), (err) => {
     if (err) {
       console.error(`Error creating random tweets. ${err}`);
@@ -187,6 +238,9 @@ app.post('/messages/create_random', (req, res) => {
   })
 
 });
+
+
+
 
 app.listen(3000, () => {
   console.log('Server listening on port 3000 🚀');

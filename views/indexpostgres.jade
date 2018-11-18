@@ -144,7 +144,7 @@ html(lang='en')
               input(type="submit", value="Enviar", class="btn btn-info")
           h1
             b Generate random tweets
-          form(action="/messages/create_random" method="POST")
+          form(action="/postgres/messages/create_random" method="POST")
             div(class="form-group")
               label(for="amount") amount
               input(type="number", name="amount", placeholder="amount", id="amount", class="form-control")

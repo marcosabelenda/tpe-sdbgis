@@ -10,10 +10,10 @@ const mongoConnectWrapper = (cb) => {
 
 const postgresConnectWrapper = (cb) => {
   const postgresConfig = {
-    user: 'jpascale',
+    user: 'root',
     host: 'localhost',
     database: 'sdbgis',
-    password: '',
+    password: 'root',
     port: 5432,
   }
   psql.config(postgresConfig, cb);
@@ -31,4 +31,3 @@ async.series([
 
   require('./app');
 });
-

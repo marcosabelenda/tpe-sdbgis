@@ -17,6 +17,8 @@
     "geodistance": "^1.0.0",
     "geolib": "^2.0.24",
     "jade": "^1.11.0",
+    "lorem-ipsum": "^1.0.6",
+    "loremize": "^2.2.1",
     "mongo": "^0.1.0",
     "mongoose": "^5.3.9"
   }

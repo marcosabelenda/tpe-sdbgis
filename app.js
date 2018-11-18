@@ -1,6 +1,9 @@
 const express = require('express')
   , bodyParser = require("body-parser")
-  , Message = require('./controllers/message');
+  , geolib = require('geolib')
+  , Message = require('./controllers/message')
+  , loremIpsum = require('lorem-ipsum')
+  , async = require('async');
 
 const maxRange = 3000; //In meters
 
@@ -10,6 +13,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.set('view engine', 'jade');
+
+const getRandomUserName = () => loremIpsum({ count: 1, units: 'words' });
+const getRandomTweet = () => loremIpsum();
 
 app.get('/', function (req, res) {
   // console.log('-------------------------------------------------------------------\nGET: Index Page');
@@ -39,8 +45,6 @@ app.post('/', function (req, res) {
 
 
 app.get('/messages/:lat/:lgn', function (req, res) {
-  console.log(req.params.lat);
-  console.log(req.params.lgn);
   Message.aggregate([
     {
       $geoNear: {
@@ -65,6 +69,52 @@ app.get('/messages/:lat/:lgn', function (req, res) {
     // console.log('-------------------------------------------------------------------\n' + req.params.lat + ',' + req.params.lgn + '\nget messages: \n' + array.toString());
     res.send(array);
   });
+});
+
+app.post('/messages/create_random', (req, res) => {
+
+  const rndInt = (max) => Math.floor(Math.random() * Math.floor(max + 1));
+
+  const amount = parseInt(req.body.amount);
+  const lat = req.body.lat;
+  const lon = req.body.lon;
+
+  if (!amount || !lat || !lon) {
+    return res.status(400).render('index');
+  }
+  const location = { lat, lon };
+
+  const messageList = [];
+
+  for (let i = 0; i < amount; i++) {
+    const dist = rndInt(maxRange);
+    const bearing = rndInt(360);
+    const newLocaltion = geolib.computeDestinationPoint(location, dist, bearing);
+    // console.log(getRandomUserName() + '> ' + getRandomTweet() + ' - ' + newLocaltion.latitude + ',' + newLocaltion.longitude);
+
+
+    // Create message
+    const message = new Message({
+      username: getRandomUserName(),
+      message: getRandomTweet(),
+      range: maxRange,
+      geometry: {
+        type: 'Point',
+        coordinates: [newLocaltion.latitude, newLocaltion.longitude]
+      },
+      type: 'Feature'
+    });
+    messageList.push(message);
+  }
+
+  async.each(messageList, (elem, cb) => Message.create(elem, cb), (err) => {
+    if (err) {
+      console.error(`Error creating random tweets. ${err}`);
+      return res.status(500).redirect('/');
+    }
+    return res.status(200).redirect('/');
+  })
+
 });
 
 app.listen(3000, () => {

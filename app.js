@@ -166,6 +166,8 @@ app.post('/', function (req, res) {
 
 
 app.get('/messages/:lat/:lgn', function (req, res) {
+  const timer = new Profiler();
+  timer.start();
   Message.aggregate([
     {
       $geoNear: {
@@ -186,8 +188,8 @@ app.get('/messages/:lat/:lgn', function (req, res) {
         array.push(val);
       }
     });
-    console.log(array);
-    res.send(array);
+    const time = timer.stop();
+    res.send({ time, results: array });
   });
 });
 

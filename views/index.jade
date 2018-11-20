@@ -53,9 +53,12 @@ html(lang='en')
 
                     //pide los mensajes cercanos a esa coordenada.
                     const url='/messages/'+ position.coords.longitude + '/' + position.coords.latitude ;
-                    $.get( url, function( resp ) {
+                    $.get( url, function( response ) {
 
                       console.log("messages response: " + resp);
+
+                      var resp = response.results;
+                      console.log("Time spent: ", response.time, " - Message amount: ", response.results.length);
 
                       //style de los markers
                       var geojsonMarkerOptions = {

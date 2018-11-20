@@ -115,12 +115,15 @@ app.post('/postgres/messages/create_random', (req, res) => {
   }
 
   const messageList = createRandomMessages(lat, lon, amount, (obj) => obj);
+  const timer = new Profiler();
+  timer.start();
 
   async.each(messageList, (elem, cb) => postgresInsert(elem, cb), (err) => {
     if (err) {
       console.error(`Error creating random tweets. ${err}`);
       return res.status(500).send(err);
     }
+    console.log('Bulk insert to MongoDB: ', messageList.length, ' tweets in ', timer.stop(), 'ms.');
     return res.status(200).redirect('/postgres/index');
   })
 
@@ -236,12 +239,15 @@ app.post('/messages/create_random', (req, res) => {
   }
 
   const messageList = createRandomMessages(lat, lon, amount, (obj) => new Message(obj));
+  const timer = new Profiler();
+  timer.start();
 
   async.each(messageList, (elem, cb) => Message.create(elem, cb), (err) => {
     if (err) {
       console.error(`Error creating random tweets. ${err}`);
       return res.status(500).redirect('/');
     }
+    console.log('Bulk insert to MongoDB: ', messageList.length, ' tweets in ', timer.stop(), 'ms.');
     return res.status(200).redirect('/');
   })
 

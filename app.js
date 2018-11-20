@@ -90,7 +90,7 @@ app.post('/postgres', (req, res) => {
 
   const queryStr = `INSERT INTO ${q.table}${q.insert_type} VALUES ${q.values}`;
   psql.query(queryStr, (err, result) => {
-    if(err){
+    if (err) {
       console.error('Error quering postgress database: ', err);
       return res.status(500).send(err);
     }
@@ -171,7 +171,7 @@ app.get('/messages/:lat/:lgn', function (req, res) {
     }
   ], function (err, result) {
     if (err) {
-      console.err(err);
+      console.error(err);
       return;
     }
     const array = [];

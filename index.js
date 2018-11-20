@@ -10,10 +10,10 @@ const mongoConnectWrapper = (cb) => {
 
 const postgresConnectWrapper = (cb) => {
   const postgresConfig = {
-    user: 'root',
+    user: 'jpascale',
     host: 'localhost',
     database: 'sdbgis',
-    password: 'root',
+    password: '',
     port: 5432,
   }
   psql.config(postgresConfig, cb);

@@ -4,7 +4,8 @@ const express = require('express')
   , Message = require('./controllers/message')
   , loremIpsum = require('lorem-ipsum')
   , async = require('async')
-  , psql = require('./storage/postgres');
+  , psql = require('./storage/postgres')
+  , { Profiler } = require('./utils/profiler');
 
 const maxRange = 3000; //In meters
 
@@ -67,12 +68,17 @@ app.get('/postgres/messages/:lat/:lng', (req, res) => {
   };
 
   const queryStr = `SELECT ${q.select} FROM ${q.from} WHERE ${q.where};`;
+
+  const timer = new Profiler();
+  timer.start();
+
   psql.query(queryStr, (err, result) => {
     if (err) {
       console.error('Error quering postgress database: ', err);
       return res.status(500).send(err);
     }
-    res.send(result.rows.map(transformPsqlToJsonObject));
+    const timeSpent = timer.stop();
+    res.send({ time: timeSpent, results: result.rows.map(transformPsqlToJsonObject) });
   });
 });
 

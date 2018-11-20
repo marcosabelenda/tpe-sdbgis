@@ -20,6 +20,7 @@
     "lorem-ipsum": "^1.0.6",
     "loremize": "^2.2.1",
     "mongo": "^0.1.0",
-    "mongoose": "^5.3.9"
+    "mongoose": "^5.3.9",
+    "pg": "^7.6.1"
   }
 }
